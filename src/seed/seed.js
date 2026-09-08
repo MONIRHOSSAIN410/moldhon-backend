@@ -15,6 +15,15 @@ const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 const pick = (arr) => arr[rand(0, arr.length - 1)];
 const daysAgo = (d) => new Date(Date.now() - d * 24 * 60 * 60 * 1000);
 
+// Seeded accounts carry a gender so the dashboard, avatars and any
+// gender-based filtering have real data to work with from the first run.
+const femaleNames = new Set([
+  'Eleanor Pena', 'Darlene Robertson', 'Courtney Henry', 'Jane Cooper', 'Daisy Russell',
+  'Emma Hawkins', 'Sabina Khan', 'Mrs. Tasmia Jaman', 'Xoina Begum', 'Sanjida Akter',
+  'Nusrat Jahan',
+]);
+const genderOf = (name) => (femaleNames.has(name) ? 'female' : 'male');
+
 const investorNames = [
   'Jerome Bell', 'Robert Fox', 'Eleanor Pena', 'Darlene Robertson', 'Guy Hawkins',
   'Micheal Kery', 'Arafat Hossain', 'Floyd Miles', 'Wade Warren', 'Courtney Henry',
@@ -58,6 +67,7 @@ const run = async () => {
     fullName: 'Arghya Biswas',
     email: 'admin@muldhon.com',
     password: '123456',
+    gender: 'male',
     role: 'admin',
     status: 'active',
     verified: true,
@@ -66,6 +76,35 @@ const run = async () => {
     organization: 'Muldhon',
     avatar: avatar('admin'),
   });
+
+  // Two accounts for checking that login returns the right profile:
+  // a male account and a female account, same password.
+  await User.create([
+    {
+      fullName: 'Rakib Hasan',
+      email: 'male@muldhon.com',
+      password: '123456',
+      gender: 'male',
+      role: 'investor',
+      status: 'active',
+      verified: true,
+      organization: 'Delta Capital',
+      location: 'Dhaka, Bangladesh',
+      bio: 'Demo male investor account.',
+    },
+    {
+      fullName: 'Nusrat Jahan',
+      email: 'female@muldhon.com',
+      password: '123456',
+      gender: 'female',
+      role: 'investor',
+      status: 'active',
+      verified: true,
+      organization: 'BD Ventures',
+      location: 'Dhaka, Bangladesh',
+      bio: 'Demo female investor account.',
+    },
+  ]);
 
   console.log('→ Creating investors & entrepreneurs…');
   const statuses = ['pending', 'accepted', 'rejected', 'live', 'active'];
@@ -76,6 +115,7 @@ const run = async () => {
         fullName: name,
         email: `${name.toLowerCase().replace(/[^a-z]/g, '')}@mail.com`,
         password: '123456',
+        gender: genderOf(name),
         role: 'investor',
         status: i < 8 ? 'active' : pick(statuses),
         phone: `+880 16${rand(10000000, 99999999)}`,
@@ -98,6 +138,7 @@ const run = async () => {
         fullName: name,
         email: `${name.toLowerCase().replace(/[^a-z]/g, '')}@mail.com`,
         password: '123456',
+        gender: genderOf(name),
         role: 'entrepreneur',
         status: i < 6 ? 'active' : pick(statuses),
         phone: `+880 17${rand(10000000, 99999999)}`,
@@ -215,7 +256,9 @@ const run = async () => {
   await Message.insertMany(msgs);
 
   console.log('\n\x1b[32m✔ Seed complete\x1b[0m');
-  console.log('  Admin login → admin@muldhon.com / 123456');
+  console.log('  Admin login  → admin@muldhon.com  / 123456');
+  console.log('  Male login   → male@muldhon.com   / 123456');
+  console.log('  Female login → female@muldhon.com / 123456');
   console.log(`  ${investors.length} investors, ${entrepreneurs.length} entrepreneurs, ${projects.length} projects, ${payments.length} payments`);
 
   await mongoose.disconnect();

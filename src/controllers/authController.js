@@ -16,7 +16,8 @@ export const register = asyncHandler(async (req, res) => {
   const {
     fullName,
     email,
-    password = '1234',
+    password,
+    gender,
     phone,
     organization,
     location,
@@ -30,6 +31,22 @@ export const register = asyncHandler(async (req, res) => {
     throw new Error('Full name and email are required');
   }
 
+  // The password used to default to '1234' when the form did not send one,
+  // which meant nobody could sign in with the password they thought they
+  // had chosen. It is now required.
+  if (!password || String(password).length < 6) {
+    res.status(400);
+    throw new Error('Password must be at least 6 characters');
+  }
+
+  // Gender decides the default profile photo, so it must be one of the two
+  // known values rather than whatever the client happened to send.
+  const normalisedGender = String(gender || '').trim().toLowerCase();
+  if (!['male', 'female'].includes(normalisedGender)) {
+    res.status(400);
+    throw new Error('Please select a gender (male or female)');
+  }
+
   const exists = await User.findOne({ email: email.toLowerCase() });
   if (exists) {
     res.status(400);
@@ -40,6 +57,7 @@ export const register = asyncHandler(async (req, res) => {
     fullName,
     email,
     password,
+    gender: normalisedGender,
     phone,
     organization,
     location,
@@ -72,8 +90,11 @@ export const login = asyncHandler(async (req, res) => {
     throw new Error('Email and password are required');
   }
 
-  const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
-  if (!user || !(await user.matchPassword(password))) {
+  const user = await User.findOne({ email: String(email).trim().toLowerCase() }).select('+password');
+
+  // A user document saved without a password (older seed data) would make
+  // bcrypt.compare throw, surfacing as a 500 with no useful message.
+  if (!user || !user.password || !(await user.matchPassword(password))) {
     res.status(401);
     throw new Error('Invalid email or password');
   }
@@ -117,9 +138,9 @@ export const changePassword = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error('Current password is incorrect');
   }
-  if (!newPassword || newPassword.length < 4) {
+  if (!newPassword || newPassword.length < 6) {
     res.status(400);
-    throw new Error('New password must be at least 4 characters');
+    throw new Error('New password must be at least 6 characters');
   }
 
   user.password = newPassword;
